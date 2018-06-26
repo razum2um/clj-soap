@@ -1,4 +1,6 @@
-(ns clj-soap.core)
+(ns clj-soap.core
+  (:import [javax.wsdl.Definition]
+           [javax.wsdl.factory.WSDLFactory]))
 
 ;;; Defining SOAP Server
 
@@ -102,11 +104,32 @@
 (defmethod soap-str->obj :boolean [soap-str argtype] (Boolean/parseBoolean soap-str))
 (defmethod soap-str->obj :default [soap-str argtype] soap-str)
 
-(defn make-client [url]
-  (doto (org.apache.axis2.client.ServiceClient. nil (java.net.URL. url) nil nil)
-    (.setOptions
-      (doto (org.apache.axis2.client.Options.)
-        (.setTo (org.apache.axis2.addressing.EndpointReference. url))))))
+(defprotocol ServiceClientFactory
+  (make-client [x]))
+
+(extend javax.wsdl.Definition
+  ServiceClientFactory
+  {:make-client (fn [x] (org.apache.axis2.client.ServiceClient. nil x nil nil))})
+
+(extend java.net.URL
+  ServiceClientFactory
+  {:make-client (fn [x] (org.apache.axis2.client.ServiceClient. nil x nil nil))})
+
+(extend java.net.URI
+  ServiceClientFactory
+  {:make-client (fn [^java.net.URI x]
+                  (if (-> x .getScheme (.startsWith "http"))
+                    (doto (make-client (java.net.URL. (str x)))
+                      (.setOptions
+                       (doto (org.apache.axis2.client.Options.)
+                         (.setTo (org.apache.axis2.addressing.EndpointReference. (str x))))))
+                    (make-client (-> (javax.wsdl.factory.WSDLFactory/newInstance)
+                                     .newWSDLReader
+                                     (.readWSDL (str x))))))})
+
+(extend java.lang.String
+  ServiceClientFactory
+  {:make-client (fn [x] (make-client (java.net.URI. x)))})
 
 (defn make-request [op & args]
   (let [factory (org.apache.axiom.om.OMAbstractFactory/getOMFactory)
