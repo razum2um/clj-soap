@@ -1,4 +1,4 @@
-(defproject razum2um/clj-soap "0.2.1"
+(defproject razum2um/clj-soap "0.2.2-SNAPSHOT"
   :description "SOAP Client and Server using Apache Axis2."
   :url "https://github.com/seancorfield/clj-soap"
   :license {:name "Eclipse Public License"
