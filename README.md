@@ -1,18 +1,12 @@
-# THIS PROJECT IS NO LONGER MAINTAINED!
-
-I forked it purely to get it running on Clojure 1.3 and then found it didn't do what I needed anyway.
-
-If you think it might be useful to you, please fork it and maintain it yourself. If you decide to take over as lead maintainer, let me know and I'll update this readme to point to your new fork.
-
-## Other SOAP-related Clojure projects that might interest you
-
-* [soap-box](https://github.com/slipset/soap-box) -- an example of how to build a simple SOAP web service (server).
-
 # clj-soap
+
+[![Build Status][BS img]][Build Status]
 
 clj-soap is SOAP server and client using Apache Axis2.
 
-This version is updated from Tetsuya Takatsuru's version to use Clojure 1.5.1 (and modern contrib). Note however that I am not actively maintaining this library and would welcome someone taking it over. I updated Tetsuya's code to use a more modern Clojure environment purely to test it for a problem I was working on - it didn't really do what I needed so I took a different approach (using Axis 1.x libraries at a much lower level for one specific web service).
+This version is updated after Tetsuya Takatsuru's and Sean Corfield versions to use Clojure 1.9.0.
+
+[![Clojars Project](http://clojars.org/razum2um/clj-soap/latest-version.svg)](http://clojars.org/razum2um/clj-soap)
 
 ## Usage
 
@@ -54,3 +48,5 @@ Copyright (C) 2011 Tetsuya Takatsuru
 
 Distributed under the Eclipse Public License, the same as Clojure.
 
+[Build Status]: https://travis-ci.org/razum2um/clj-soap
+[BS img]: https://travis-ci.org/razum2um/clj-soap.png
