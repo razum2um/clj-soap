@@ -1,6 +1,7 @@
 (ns clj-soap.test.core
-  (:use [clj-soap.core])
-  (:use [clojure.test]))
+  (:require [clojure.java.io :as io])
+  (:use [clj-soap.core]
+        [clojure.test]))
 
 (def test-value (ref false))
 
@@ -25,6 +26,32 @@
     ;(is (= "abcabc" (cl :doubl2 "abc")))
     ))
 
+(defn axis-ops [wsdl-fname]
+  (-> wsdl-fname
+      io/resource
+      make-client
+      .getAxisService
+      axis-service-operations))
+
+(defn axis-op-by-name [wsdl-fname op-name]
+  (->> wsdl-fname
+       axis-ops
+       (filter #(-> % axis-op-name (= op-name)))
+       first))
+
+;; wsdl service: http://www.dneonline.com/calculator.asmx
+(deftest qualified-params
+  (let [qualified-req (-> "fixtures/calculator.wsdl"
+                          (axis-op-by-name "Add")
+                          (make-request 1 2))]
+    (is (re-find #"<\w+:intA>1</\w+:intA><\w+:intB>2</\w+:intB>" (.toString qualified-req)))))
+
+(deftest unqualified-params
+  (let [unqualified-req (-> "fixtures/calculator-unqualified.wsdl"
+                            (axis-op-by-name "Add")
+                            (make-request 3 4))]
+    (is (re-find #"<intA>3</intA><intB>4</intB>" (.toString unqualified-req)))))
+
 ;;;; Test for exteral SOAP service
 #_(let [client (client-fn "http://wsf.cdyne.com/WeatherWS/Weather.asmx?WSDL")]
-  (client :GetCityWeatherByZIP "16001"))
+    (client :GetCityWeatherByZIP "16001"))

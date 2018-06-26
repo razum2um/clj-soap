@@ -1,6 +1,8 @@
 (ns clj-soap.core
   (:import [javax.wsdl.Definition]
-           [javax.wsdl.factory.WSDLFactory]))
+           [javax.wsdl.factory.WSDLFactory]
+           [org.apache.axis2.description AxisMessage AxisOperation]
+           [org.apache.ws.commons.schema XmlSchemaForm XmlSchemaElement]))
 
 ;;; Defining SOAP Server
 
@@ -75,16 +77,25 @@
 (defn axis-op-namespace [axis-op]
   (.getNamespaceURI (.getName axis-op)))
 
+(defn axis-out-message? [^AxisMessage msg]
+  (= "out" (.getDirection msg)))
+
+(defn axis-in-message? [^AxisMessage msg]
+  (= "in" (.getDirection msg)))
+
+(defn axis-messages [^AxisOperation op]
+  (iterator-seq (.getMessages op)))
+
 (defn axis-op-args [axis-op]
-  (for [elem (some-> (first (filter #(= "out" (.getDirection %))
-                                 (iterator-seq (.getMessages axis-op))))
-                  .getSchemaElement .getSchemaType
-                  .getParticle .getItems)]
-    {:name (.getName elem) :type (some-> elem .getSchemaType .getName keyword)}))
+  (when-let [^XmlSchemaElement schema (some-> (filter axis-out-message? (axis-messages axis-op))
+                                              first .getSchemaElement)]
+    (for [elem (-> schema .getSchemaType .getParticle .getItems)]
+      {:name (.getName elem)
+       :type (some-> elem .getSchemaType .getName keyword)
+       :qualified? (-> schema .getForm (= XmlSchemaForm/QUALIFIED))})))
 
 (defn axis-op-rettype [axis-op]
-  (some-> (first (filter #(= "in" (.getDirection %))
-                      (iterator-seq (.getMessages axis-op))))
+  (some-> (first (filter axis-in-message? (axis-messages axis-op)))
           .getSchemaElement .getSchemaType .getParticle .getItems first
           .getSchemaType .getName keyword))
 
@@ -137,11 +148,11 @@
                   factory (javax.xml.namespace.QName.
                             (axis-op-namespace op) (axis-op-name op)))
         op-args (axis-op-args op)]
-    (doseq [[argval argtype] (map list args op-args)]
+    (doseq [[argval {:keys [name type qualified?]}] (map list args op-args)]
       (.addChild request
                  (doto (.createOMElement
-                         factory (javax.xml.namespace.QName. (axis-op-namespace op) (:name argtype)))
-                   (.setText (obj->soap-str argval (:type argtype))))))
+                        factory (javax.xml.namespace.QName. (if qualified? (axis-op-namespace op) "") name))
+                   (.setText (obj->soap-str argval type)))))
     request))
 
 (defn get-result [op retelem]
